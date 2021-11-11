@@ -4,54 +4,77 @@ import math
 from naoqi import ALProxy
 import motion
 import time
+import pickle
+import numpy as np
+import cv2
+import zmq
 from threading import Thread
 
+"""This file handles all the Nao interactions"""
+
+"""ROBOT IP"""
+ip = "127.0.0.1"
+port = 9559
+
+
+def visionThread():
+    global ip
+    global port
+    context = zmq.Context()
+    socket = context.socket(zmq.REP)
+    socket.bind("tcp://*:5555")
+
+    # get NAOqi module proxy
+    videoDevice = ALProxy('ALVideoDevice', ip, port)
+
+    # subscribe top camera
+    AL_kTopCamera = 0
+    AL_kQVGA = 1  # 320x240
+    AL_kBGRColorSpace = 13
+    captureDevice = videoDevice.subscribeCamera(
+        "test", AL_kTopCamera, AL_kQVGA, AL_kBGRColorSpace, 10)
+
+    # create image
+    width = 320
+    height = 240
+    image = np.zeros((height, width, 3), np.uint8)
+
+    while True:
+        # get image
+        result = videoDevice.getImageRemote(captureDevice);
+        if result == None:
+            print('cannot capture.')
+        elif result[6] == None:
+            print('no image data string.')
+        else:
+
+            # translate value to mat
+            values = result[6]
+            i = 0
+            for y in range(0, height):
+                for x in range(0, width):
+                    image.itemset((y, x, 0), ord(values[i + 0]))
+                    image.itemset((y, x, 1), ord(values[i + 1]))
+                    image.itemset((y, x, 2), ord(values[i + 2]))
+                    i += 3
+            message = socket.recv()
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            socket.send(pickle.dumps(image))
+
+
 # this file is the main file which controls NAO
-chainName = "LArm"
-frame = motion.FRAME_ROBOT
-useSensor = False
-axisMask = 7
 angle1 = 1
 angle2 = 1
-tts = ALProxy("ALTextToSpeech", "127.0.0.1", 9559)
-motionProxy = ALProxy("ALMotion", "127.0.0.1", 9559)
-process = subprocess.Popen("""C:/Program Files/Python38/python.exe vr.py""",
+thread = Thread(target=visionThread)  # makes a thread for the imageThread function
+thread.start()
+tts = ALProxy("ALTextToSpeech", ip, port)
+motionProxy = ALProxy("ALMotion", ip, port)
+motionProxy.setStiffnesses('Head', 1.0)
+process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
                            stdout=subprocess.PIPE)
 
-
-def armThread():
-    pass
-    # while True:
-    #     for line in iter(process.stdout.readline,
-    #                      ''):
-    #         if "Controller 1:  " in line and "[I]" not in line:
-    #             fractionMaxSpeed = 1
-    #             sys.stdout.write(line)
-    #             armline = line
-    #             cont = armline.replace("Controller 1:  ", "").replace("]", "").replace("[",
-    #                                                                             "").replace(
-    #                 ",", "")
-    #             coord = list(map(float, cont.split()))
-    #             x, y, z, _, _, _ = coord
-    #             if x == 0.0:
-    #                 continue
-    #             constant = 0.00624797086946079510148647328347
-    #             target = [x*-0.03388910584270261663364223270427,y*0.00199719102073177345260041979246,z*-0.01264622217894538614674518607318,0.0,0.0,0.0]
-    #             print(target)
-    #
-    #             try:
-    #                 motionProxy.setPositions(chainName, frame, target,
-    #                                      fractionMaxSpeed, axisMask)
-    #             except Exception as e:
-    #                 print(e)
-    #             time.sleep(1)
-            
-
-
-thread = Thread(target=armThread)  # makes a thread for the imageThread function
-thread.start()
-
 while True:
+    # TODO: Socket the headset connection?
     for line in iter(process.stdout.readline,
                      ''):  # replace '' with b'' for Python 3
         if "Headset:  " in line and "[I]" not in line:
@@ -68,6 +91,7 @@ while True:
             except:
                 pass
             fractionMaxSpeed = 0.3
+            # TODO: Fix wrapping yaw values before -80 and after 80
             motionProxy.setAngles("HeadYaw", angle1,
                                   fractionMaxSpeed)
             motionProxy.setAngles("HeadPitch", angle2,
