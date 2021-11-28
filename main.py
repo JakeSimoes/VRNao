@@ -41,7 +41,7 @@ def visionThread():
 
     while True:
         # get image
-        result = videoDevice.getImageRemote(captureDevice);
+        result = videoDevice.getImageRemote(captureDevice)
         if result == None:
             print('cannot capture.')
         elif result[6] == None:
