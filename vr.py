@@ -53,17 +53,16 @@ def convert_to_radians(pose_mat):
     y = pose_mat[1][3]
     z = pose_mat[2][3]
     result = ((r_y * 180) + 180)
-    upperbound = 0
-    # TODO: Find the lower bound
+
     if center > 180:
         upperbound = center - 180
     else:
-        upperbound = 180 + center
+        upperbound = 180 + centern
 
-    if result > center or result < upperbound:
-        return [-min(abs(result - center), 360 - abs(result - center)), (r_x * 80)]
+    if result > center and result < upperbound:
+        return [-min(abs(result - center), 360 - abs(result - center)), (r_x)]
     else:
-        return [min(abs(result - center), 360 - abs(result - center)), (r_x * 80)]
+        return [min(abs(result - center), 360 - abs(result - center)), (r_x)]
 
 
 def center_headset(pose_mat):
@@ -177,7 +176,8 @@ while True:
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
 
     agh = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
-    socket2.send(pickle.dumps(agh))
+    message = socket2.recv()
+    socket2.send_string("{} {}".format(*agh))
 
     # try:
     #     #print("\nController 1: ", arr)
