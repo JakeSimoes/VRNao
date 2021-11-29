@@ -13,7 +13,7 @@ from threading import Thread
 """This file handles all the Nao interactions"""
 
 """ROBOT IP"""
-ip = "10.30.48.195"
+ip = "127.0.0.1"
 port = 9559
 
 
@@ -72,25 +72,22 @@ motionProxy = ALProxy("ALMotion", ip, port)
 postureProxy = ALProxy("ALRobotPosture", ip, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
 motionProxy.setStiffnesses('Head', 1.0)
-process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
                            stdout=subprocess.PIPE)
-time.sleep(.5)
+print('d')
 context2 = zmq.Context()
-socket2 = context2.socket(zmq.REP)
+socket2 = context2.socket(zmq.REQ)
 socket2.connect("tcp://localhost:5556")
-
+print('d')
 while True:
-    print("1")
-    socket2.send(b"Hello")
-    message = socket2.recv()
-    result = pickle.loads(message)
-    print(result)
+    socket2.send(" ")
+    message = socket2.recv_string()
+    yaw, pitch = map(float, message.split(" "))
     fractionMaxSpeed = 0.3
-    # TODO: Fix wrapping yaw values before -80 and after 80
-    time.sleep(1)
-    motionProxy.setAngles("HeadYaw", math.radians(message[0]),
+    print(pitch)
+    motionProxy.setAngles("HeadYaw", math.radians(yaw),
                           fractionMaxSpeed)
-    #motionProxy.setAngles("HeadPitch", math.radians(float(coords[1])),
-    #                      fractionMaxSpeed)
+    motionProxy.setAngles("HeadPitch", math.radians(pitch),
+                          fractionMaxSpeed)
 
 
