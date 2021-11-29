@@ -40,6 +40,7 @@ def read_texture(image_data):
 
 # Convert the 3x4 position/rotation matrix to a x,y,z location and the appropriate Euler angles (in radians)
 def convert_to_radians(pose_mat):
+    global center
     r_w = math.sqrt(max(0, 1 + pose_mat[0][0] + pose_mat[1][1] + pose_mat[2][2])) / 2
     r_x = math.sqrt(max(0, 1 + pose_mat[0][0] - pose_mat[1][1] - pose_mat[2][2])) / 2
     r_y = math.sqrt(max(0, 1 - pose_mat[0][0] + pose_mat[1][1] - pose_mat[2][2])) / 2
@@ -51,13 +52,34 @@ def convert_to_radians(pose_mat):
     x = pose_mat[0][3]
     y = pose_mat[1][3]
     z = pose_mat[2][3]
-    # (r_z * 180)  # Head up and down
-    result = ((r_y * 20) + 180)
-    if result > 180 + 24 or result < 24:
-        return -min(abs(result - 24), 360 - abs(result - 24))
+    result = ((r_y * 180) + 180)
+    upperbound = 0
+    # TODO: Find the lower bound
+    if center > 180:
+        upperbound = center - 180
     else:
-        return min(abs(result - 24), 360 - abs(result - 24))
+        upperbound = 180 + center
 
+    if result > center or result < upperbound:
+        return [-min(abs(result - center), 360 - abs(result - center)), (r_x * 80)]
+    else:
+        return [min(abs(result - center), 360 - abs(result - center)), (r_x * 80)]
+
+
+def center_headset(pose_mat):
+    global center
+    r_w = math.sqrt(max(0, 1 + pose_mat[0][0] + pose_mat[1][1] + pose_mat[2][2])) / 2
+    r_x = math.sqrt(max(0, 1 + pose_mat[0][0] - pose_mat[1][1] - pose_mat[2][2])) / 2
+    r_y = math.sqrt(max(0, 1 - pose_mat[0][0] + pose_mat[1][1] - pose_mat[2][2])) / 2
+    r_z = math.sqrt(max(0, 1 - pose_mat[0][0] - pose_mat[1][1] + pose_mat[2][2])) / 2
+    r_x *= math.copysign(1, r_x * (-pose_mat[2][1] + pose_mat[1][2]))
+    r_y *= math.copysign(1, r_y * (-pose_mat[0][2] + pose_mat[2][0]))
+    r_z *= math.copysign(1, r_z * (pose_mat[1][0] - pose_mat[0][1]))
+
+    x = pose_mat[0][3]
+    y = pose_mat[1][3]
+    z = pose_mat[2][3]
+    center = ((r_y * 180) + 180)
 
 
 
@@ -111,11 +133,15 @@ def overlay_refresh():
             finally:
                 break
 
-
+context2 = zmq.Context()
+socket2 = context2.socket(zmq.REP)
+socket2.bind("tcp://*:5556")
+center = 0
 poses = []  # Will be populated with proper type after first call
 # The next four lines create the Overlay and set its distance
 openvr.init(openvr.VRApplication_Scene)
 openvr.init(openvr.VRApplication_Overlay)
+system = openvr.IVRSystem()
 handle = openvr.VROverlay().createOverlay("foo", "bar")  # creates the overlay
 openvr.VROverlay().setOverlayWidthInMeters(handle, 1.0)  # sets overlay size
 
@@ -139,32 +165,32 @@ openvr.VROverlay().setOverlayTransformTrackedDeviceRelative(handle,
 thread = Thread(target=overlay_refresh)  # makes a thread for the imageThread function
 thread.start()  # starts the imageThread which will update the video feed.
 while True:
+    _, leftControllerState = system.getControllerState(
+        system.getTrackedDeviceIndexForControllerRole(openvr.TrackedControllerRole_LeftHand))
+    _, rightControllerState = system.getControllerState(
+        system.getTrackedDeviceIndexForControllerRole(openvr.TrackedControllerRole_RightHand))
     poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
     hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
-    # the following lines convert the input to a numpy array, splice it to get
-    # only the data we need and then converts that euler to x,y,z
-    arr = numpy.array(list(hmd_pose.mDeviceToAbsoluteTracking))
-    r = R.from_matrix(arr[0:, 0:-1])
-    #print("\nHeadset: ", r.as_euler('xyz', degrees=True))
-    #print("\nHeadset: ", r.as_euler('xyz', degrees=True)[1]-initial[1])
-
-    poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
     lc_pose = poses[openvr.k_EButton_IndexController_B]
-    agh = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
-    print(agh)
-
-    try:
-        #print("\nController 1: ", arr)
-        pass
-    except:
-        pass
-    poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
     rc_pose = poses[openvr.k_EButton_IndexController_A]
-    arr = numpy.array(list(lc_pose.mDeviceToAbsoluteTracking))
-    try:
-        pass
-        #print("Controller 2: ", convert_to_radians(arr))
-    except:
-        pass
+    if bool(leftControllerState.ulButtonPressed >> 2 & 1):
+        center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
+
+    agh = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
+    socket2.send(pickle.dumps(agh))
+
+    # try:
+    #     #print("\nController 1: ", arr)
+    #     pass
+    # except:
+    #     pass
+    # poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
+    # rc_pose = poses[openvr.k_EButton_IndexController_A]
+    # arr = numpy.array(list(lc_pose.mDeviceToAbsoluteTracking))
+    # try:
+    #     pass
+    #     #print("Controller 2: ", convert_to_radians(arr))
+    # except:
+    #     pass
 
 openvr.shutdown()

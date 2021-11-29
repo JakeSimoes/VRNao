@@ -13,7 +13,7 @@ from threading import Thread
 """This file handles all the Nao interactions"""
 
 """ROBOT IP"""
-ip = "127.0.0.1"
+ip = "10.30.48.195"
 port = 9559
 
 
@@ -69,31 +69,28 @@ thread = Thread(target=visionThread)  # makes a thread for the imageThread funct
 thread.start()
 tts = ALProxy("ALTextToSpeech", ip, port)
 motionProxy = ALProxy("ALMotion", ip, port)
+postureProxy = ALProxy("ALRobotPosture", ip, 9559)
+postureProxy.goToPosture("StandInit", 0.5)
 motionProxy.setStiffnesses('Head', 1.0)
-process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
+process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
                            stdout=subprocess.PIPE)
+time.sleep(.5)
+context2 = zmq.Context()
+socket2 = context2.socket(zmq.REP)
+socket2.connect("tcp://localhost:5556")
 
 while True:
-    # TODO: Socket the headset connection?
-    for line in iter(process.stdout.readline,
-                     ''):  # replace '' with b'' for Python 3
-        if "Headset:  " in line and "[I]" not in line:
-            headline = line
-            sys.stdout.write(line)
-            coords = headline.replace("Headset:  ", "").replace("[", "").replace("]", "").replace(
-                "  ", " ").replace("1  ", "").strip().split(" ")
-            try:
-                angle2 = math.radians(-1.0 * float(coords[0]) - 10)
-            except:
-                pass
-            try:
-                angle1 = math.radians(float(coords[1]))
-            except:
-                pass
-            fractionMaxSpeed = 0.3
-            # TODO: Fix wrapping yaw values before -80 and after 80
-            motionProxy.setAngles("HeadYaw", angle1,
-                                  fractionMaxSpeed)
-            motionProxy.setAngles("HeadPitch", angle2,
-                                  fractionMaxSpeed)
+    print("1")
+    socket2.send(b"Hello")
+    message = socket2.recv()
+    result = pickle.loads(message)
+    print(result)
+    fractionMaxSpeed = 0.3
+    # TODO: Fix wrapping yaw values before -80 and after 80
+    time.sleep(1)
+    motionProxy.setAngles("HeadYaw", math.radians(message[0]),
+                          fractionMaxSpeed)
+    #motionProxy.setAngles("HeadPitch", math.radians(float(coords[1])),
+    #                      fractionMaxSpeed)
+
 
