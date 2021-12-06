@@ -57,27 +57,18 @@ def convert_to_radians(pose_mat):
     if center > 180:
         upperbound = center - 180
     else:
-        upperbound = 180 + centern
+        upperbound = 180 + center
 
     if result > center and result < upperbound:
-        return [-min(abs(result - center), 360 - abs(result - center)), (r_x)]
+        return [-min(abs(result - center), 360 - abs(result - center)), (r_x*40)]
     else:
-        return [min(abs(result - center), 360 - abs(result - center)), (r_x)]
+        return [min(abs(result - center), 360 - abs(result - center)), (r_x*40)]
 
 
 def center_headset(pose_mat):
     global center
-    r_w = math.sqrt(max(0, 1 + pose_mat[0][0] + pose_mat[1][1] + pose_mat[2][2])) / 2
-    r_x = math.sqrt(max(0, 1 + pose_mat[0][0] - pose_mat[1][1] - pose_mat[2][2])) / 2
     r_y = math.sqrt(max(0, 1 - pose_mat[0][0] + pose_mat[1][1] - pose_mat[2][2])) / 2
-    r_z = math.sqrt(max(0, 1 - pose_mat[0][0] - pose_mat[1][1] + pose_mat[2][2])) / 2
-    r_x *= math.copysign(1, r_x * (-pose_mat[2][1] + pose_mat[1][2]))
     r_y *= math.copysign(1, r_y * (-pose_mat[0][2] + pose_mat[2][0]))
-    r_z *= math.copysign(1, r_z * (pose_mat[1][0] - pose_mat[0][1]))
-
-    x = pose_mat[0][3]
-    y = pose_mat[1][3]
-    z = pose_mat[2][3]
     center = ((r_y * 180) + 180)
 
 
@@ -107,6 +98,7 @@ def overlay_refresh():
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth_buffer)
     # time.sleep(0.5)
     while True:
+        pass
         socket.send(b"Hello")
 
         #  Get the reply.
@@ -149,8 +141,6 @@ hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
 # the following lines convert the input to a numpy array, splice it to get
 # only the data we need and then converts that euler to x,y,z
 arr = numpy.array(list(hmd_pose.mDeviceToAbsoluteTracking))
-r = R.from_matrix(arr[0:, 0:-1])
-initial = r.as_euler('xyz', degrees=True)
 
 arr = openvr.HmdMatrix34_t  # a reference to the data type
 # creates an array structure that will be put into a HmdMatrix34 variable.

@@ -72,13 +72,11 @@ motionProxy = ALProxy("ALMotion", ip, port)
 postureProxy = ALProxy("ALRobotPosture", ip, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
 motionProxy.setStiffnesses('Head', 1.0)
-process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
+process = subprocess.Popen("""C:\Users\Jake Simoes\AppData\Local\Programs\Python\Python39\python.exe vr.py""",
                            stdout=subprocess.PIPE)
-print('d')
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
 socket2.connect("tcp://localhost:5556")
-print('d')
 while True:
     socket2.send(" ")
     message = socket2.recv_string()
