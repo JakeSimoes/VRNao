@@ -26,4 +26,4 @@ ratios = [ratiox,ratioy,ratioz]
 
 
 for index, i in enumerate(HMDtoRobot):
-    print([0.14422988891601562, 0.4756094217300415, 0.09319299459457397][i]*ratios[index])
+    print(HMDr[i]*ratios[index])

@@ -54,7 +54,7 @@ while True:
     hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
     lc_pose = poses[openvr.k_EButton_IndexController_A]
     rc_pose = poses[openvr.k_EButton_IndexController_B]
-    if bool(leftControllerState.ulButtonPressed >> 2 & 1):
+    if bool(rightControllerState.ulButtonPressed >> 2 & 1):
         controller_position = convert_to_radians(list(rc_pose.mDeviceToAbsoluteTracking))
         HMD_position = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
         print('Controller: ', controller_position, 'HMD: ', HMD_position)

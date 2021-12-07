@@ -14,7 +14,8 @@ frame           = motion.FRAME_TORSO
 useSensorValues = True
 postureProxy = ALProxy("ALRobotPosture", robotIP, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
-result          = motionProxy.setPosition(name, frame, [0.21852481365203857, -0.11097142845392227, 0.08776913583278656,0,0,0], 1, 7)
+result          = motionProxy.setPosition(name, frame, [0.120282462081, 0.232241273302, 0.149190879559, 0, 0, 0], 1, 7)
+# TODO: Take into account the position of the head when making ratios dummy! The HMD is relative to the HMD, NAO to his torso.
 #result          = motionProxy.getPosition(name, frame, useSensorValues)
 # print "Position of", name, " in World is:"
 # print result

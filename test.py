@@ -10,18 +10,18 @@ HMDtoRobot = [2,0,1]
 robotr = [0.042262956500053406, -0.31279024481773376, 0.08768601715564728]
 HMDr = [0.6773498952388763, 0.10197412967681885, 0.1579793393611908]
 
-ratioy = robots[1]/HMDr[0]
+ratioy = robotr[1]/HMDr[0]
 
 # print(ratioy)
 
 robotu = [0.012218689545989037, -0.11518584936857224, 0.31823793053627014]
-HMDu = [0.14422988891601562, 0.4756094217300415, 0.09319299459457397]
+HMDu = [0.4954894036054611, 0.94499671459198, 0.29504750669002533]
 
-ratioz = robots[2]/HMDu[1]
+ratioz = robotu[2]/HMDu[1]
 
 # print(ratioz)
 
-ratios = [ratiox,ratioy,ratioz]
+ratios = [ratiox,-ratioy,ratioz]
 
 for index, i in enumerate(HMDtoRobot):
-    print(HMDs[i]*ratios[index])
+    print([0.5029204227030277, 0.44301724433898926, 0.32929956912994385][i]*ratios[index])
