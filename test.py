@@ -1,27 +1,22 @@
 robots = [0.21852624416351318, -0.1109335795044899, 0.08768560737371445]
 HMDs = [0.21623797714710236, 0.18147623538970947, 0.5982634276151657]
-
 ratiox = robots[0]/HMDs[2]
-
-HMDtoRobot = [2,0,1]
-
-# print(ratiox)
 
 robotr = [0.042262956500053406, -0.31279024481773376, 0.08768601715564728]
 HMDr = [0.6773498952388763, 0.10197412967681885, 0.1579793393611908]
-
 ratioy = robotr[1]/HMDr[0]
-
-# print(ratioy)
 
 robotu = [0.012218689545989037, -0.11518584936857224, 0.31823793053627014]
 HMDu = [0.4954894036054611, 0.94499671459198, 0.29504750669002533]
-
 ratioz = robotu[2]/HMDu[1]
 
-# print(ratioz)
-
 ratios = [ratiox,-ratioy,ratioz]
+HMDtoRobot = [2,0,1]
 
+relative_hmd = [0.042262956500053406, -0.31279024481773376, 0.08768601715564728]
+relative_robot = []
 for index, i in enumerate(HMDtoRobot):
-    print([0.5029204227030277, 0.44301724433898926, 0.32929956912994385][i]*ratios[index])
+    relative_robot.append(relative_hmd[i]*ratios[index])
+
+#relative_robot[2] += 0.1264999955892563
+print(relative_robot)

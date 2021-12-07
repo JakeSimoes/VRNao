@@ -96,7 +96,7 @@ def overlay_refresh():
     glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer)
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 240, 320)
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth_buffer)
-    # time.sleep(0.5)
+    time.sleep(0.1)
     while True:
         pass
         socket.send(b"Hello")
@@ -154,33 +154,33 @@ openvr.VROverlay().setOverlayTransformTrackedDeviceRelative(handle,
 thread = Thread(target=overlay_refresh)  # makes a thread for the imageThread function
 thread.start()  # starts the imageThread which will update the video feed.
 while True:
-    _, leftControllerState = system.getControllerState(
+    # Grabbing VR data
+    _, left_controller_state = system.getControllerState(
         system.getTrackedDeviceIndexForControllerRole(openvr.TrackedControllerRole_LeftHand))
-    _, rightControllerState = system.getControllerState(
+    _, right_controller_state = system.getControllerState(
         system.getTrackedDeviceIndexForControllerRole(openvr.TrackedControllerRole_RightHand))
     poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
     hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
-    lc_pose = poses[openvr.k_EButton_IndexController_B]
-    rc_pose = poses[openvr.k_EButton_IndexController_A]
-    if bool(leftControllerState.ulButtonPressed >> 2 & 1):
+    lc_pose = poses[openvr.k_EButton_IndexController_A]
+    rc_pose = poses[openvr.k_EButton_IndexController_B]
+
+    # Grabbing positional data and formatting it
+    controller_position = convert_to_radians(list(rc_pose.mDeviceToAbsoluteTracking))
+    HMD_position = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
+    print('Controller: ', controller_position, 'HMD: ', HMD_position)
+    position = [0, 0, 0]
+    for index, i in enumerate(HMD_position):
+        if i > controller_position[index]:
+            position[index] = i - controller_position[index]
+        else:
+            position[index] = controller_position[index] - i
+
+    if bool(left_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
 
-    agh = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
+    final_packet = HMD_position + position
     message = socket2.recv()
-    socket2.send_string("{} {}".format(*agh))
+    socket2.send_string("{} {} {} {} {}".format(*final_packet))
 
-    # try:
-    #     #print("\nController 1: ", arr)
-    #     pass
-    # except:
-    #     pass
-    # poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
-    # rc_pose = poses[openvr.k_EButton_IndexController_A]
-    # arr = numpy.array(list(lc_pose.mDeviceToAbsoluteTracking))
-    # try:
-    #     pass
-    #     #print("Controller 2: ", convert_to_radians(arr))
-    # except:
-    #     pass
 
 openvr.shutdown()
