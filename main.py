@@ -72,7 +72,7 @@ motionProxy = ALProxy("ALMotion", ip, port)
 postureProxy = ALProxy("ALRobotPosture", ip, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
 motionProxy.setStiffnesses('Head', 1.0)
-process = subprocess.Popen("""C:\Program Files\Python38\python.exe vr.py""",
+process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
                            stdout=subprocess.PIPE)
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
@@ -81,7 +81,7 @@ while True:
     socket2.send(" ")
     message = socket2.recv_string()
     print(message)
-    yaw, pitch, x, y, z = map(float, message.split(" "))
+    yaw, pitch, x,y,z = map(float, message.split(" "))
     fractionMaxSpeed = 0.3
     motionProxy.setAngles("HeadYaw", math.radians(yaw),
                           fractionMaxSpeed)

@@ -39,6 +39,14 @@ def read_texture(image_data):
 
 
 # Convert the 3x4 position/rotation matrix to a x,y,z location and the appropriate Euler angles (in radians)
+def convert_to_cartesian(pose_mat):
+
+    x = pose_mat[0][3]
+    y = pose_mat[1][3]
+    z = pose_mat[2][3]
+    return [x,y,z]
+
+
 def convert_to_radians(pose_mat):
     global center
     r_w = math.sqrt(max(0, 1 + pose_mat[0][0] + pose_mat[1][1] + pose_mat[2][2])) / 2
@@ -163,11 +171,10 @@ while True:
     hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
     lc_pose = poses[openvr.k_EButton_IndexController_A]
     rc_pose = poses[openvr.k_EButton_IndexController_B]
-
+    HMD_rotation = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
     # Grabbing positional data and formatting it
-    controller_position = convert_to_radians(list(rc_pose.mDeviceToAbsoluteTracking))
-    HMD_position = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
-    print('Controller: ', controller_position, 'HMD: ', HMD_position)
+    controller_position = convert_to_cartesian(list(rc_pose.mDeviceToAbsoluteTracking))
+    HMD_position = convert_to_cartesian(list(hmd_pose.mDeviceToAbsoluteTracking))
     position = [0, 0, 0]
     for index, i in enumerate(HMD_position):
         if i > controller_position[index]:
@@ -175,12 +182,13 @@ while True:
         else:
             position[index] = controller_position[index] - i
 
-    if bool(left_controller_state.ulButtonPressed >> 2 & 1):
+    if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
 
-    final_packet = HMD_position + position
+    final_packet = HMD_rotation + position
     message = socket2.recv()
     socket2.send_string("{} {} {} {} {}".format(*final_packet))
+    #socket2.send_string("{} {}".format(*HMD_position))
 
 
 openvr.shutdown()
