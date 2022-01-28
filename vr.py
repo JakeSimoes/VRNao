@@ -1,3 +1,6 @@
+from klampt import *
+from klampt import vis
+from klampt.model import ik
 import math
 import time
 import zmq
@@ -159,6 +162,13 @@ test._setArray(bar)  # setting the empty HmdMatrix34 var to the bar array.
 openvr.VROverlay().setOverlayTransformTrackedDeviceRelative(handle,
                                                             openvr.k_unTrackedDeviceIndex_Hmd,
                                                             test)
+# now setting up the IK solver...
+world = WorldModel()
+world.loadFile("nao_rob/nao.rob")
+robot = world.robot(0)
+link = robot.link(69)
+HMDtoRobot = [2,0,1]
+rArmRotations = [0,0,0,0]
 thread = Thread(target=overlay_refresh)  # makes a thread for the imageThread function
 thread.start()  # starts the imageThread which will update the video feed.
 while True:
@@ -169,11 +179,12 @@ while True:
         system.getTrackedDeviceIndexForControllerRole(openvr.TrackedControllerRole_RightHand))
     poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
     hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
+    # This grabs that state of the controller
     lc_pose = poses[openvr.k_EButton_IndexController_A]
     rc_pose = poses[openvr.k_EButton_IndexController_B]
     HMD_rotation = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
     # Grabbing positional data and formatting it
-    controller_position = convert_to_cartesian(list(rc_pose.mDeviceToAbsoluteTracking))
+    controller_position = convert_to_cartesian(list(lc_pose.mDeviceToAbsoluteTracking))
     HMD_position = convert_to_cartesian(list(hmd_pose.mDeviceToAbsoluteTracking))
     position = [0, 0, 0]
     for index, i in enumerate(HMD_position):
@@ -184,10 +195,19 @@ while True:
 
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
-
-    final_packet = HMD_rotation + position
+    # Scale the coordinates
+    ratios = [0.2690286461961894, -0.5225724060631975, 0.5510363369906585]
+    relative_robot = []
+    for index, i in enumerate(HMDtoRobot):
+        relative_robot.append(position[i] * ratios[index])
+    # Set them as an objective and solve.
+    obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
+    # Iterations are set low so it can be fast, may be weird at times.
+    ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
+    rArmRotations = robot.getConfig()[65:69]
+    final_packet = HMD_rotation + rArmRotations
     message = socket2.recv()
-    socket2.send_string("{} {} {} {} {}".format(*final_packet))
+    socket2.send_string("{} {} {} {} {} {}".format(*final_packet))
     #socket2.send_string("{} {}".format(*HMD_position))
 
 

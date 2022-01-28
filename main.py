@@ -13,7 +13,7 @@ from threading import Thread
 """This file handles all the Nao interactions"""
 
 """ROBOT IP"""
-ip = "127.0.0.1"
+ip = "10.30.48.194"
 port = 9559
 
 
@@ -72,7 +72,7 @@ motionProxy = ALProxy("ALMotion", ip, port)
 postureProxy = ALProxy("ALRobotPosture", ip, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
 motionProxy.setStiffnesses('Head', 1.0)
-process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
+process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
                            stdout=subprocess.PIPE)
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
@@ -81,11 +81,19 @@ while True:
     socket2.send(" ")
     message = socket2.recv_string()
     print(message)
-    yaw, pitch, x,y,z = map(float, message.split(" "))
+    yaw, pitch, sPitch, sRoll, eYaw, eRoll = map(float, message.split(" "))
     fractionMaxSpeed = 0.3
     motionProxy.setAngles("HeadYaw", math.radians(yaw),
                           fractionMaxSpeed)
     motionProxy.setAngles("HeadPitch", math.radians(pitch),
+                          fractionMaxSpeed)
+    motionProxy.setAngles("RShoulderPitch", sPitch,
+                          fractionMaxSpeed)
+    motionProxy.setAngles("RShoulderRoll", sRoll,
+                          fractionMaxSpeed)
+    motionProxy.setAngles("RElbowYaw", eYaw,
+                          fractionMaxSpeed)
+    motionProxy.setAngles("RElbowRoll", eRoll,
                           fractionMaxSpeed)
 
 

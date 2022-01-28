@@ -10,6 +10,9 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 from threading import Thread
 from scipy.spatial.transform import Rotation as R
+from klampt import *
+from klampt import vis
+from klampt.model import ik
 
 
 # Convert the 3x4 position/rotation matrix to a x,y,z location and the appropriate Euler angles (in radians)
