@@ -17,6 +17,23 @@ ip = "127.0.0.1"
 port = 9559
 
 
+def armThread():
+    # TODO: Add gripper and wrist rotation control.
+    # wait a good amount of time for variables to get initialized
+    time.sleep(5)
+    global ip, port, sPitch, sRoll, eYaw, eRoll, motionProxy
+    while True:
+        motionProxy.setAngles("RShoulderPitch", -sPitch,
+                              fractionMaxSpeed)
+        motionProxy.setAngles("RShoulderRoll", sRoll,
+                              fractionMaxSpeed)
+        motionProxy.setAngles("RElbowYaw", eYaw,
+                              fractionMaxSpeed)
+        motionProxy.setAngles("RElbowRoll", eRoll,
+                              fractionMaxSpeed)
+        time.sleep(0.1)
+
+
 def visionThread():
     global ip
     global port
@@ -63,17 +80,21 @@ def visionThread():
 
 
 # this file is the main file which controls NAO
-angle1 = 1
-angle2 = 1
-thread = Thread(target=visionThread)  # makes a thread for the imageThread function
-thread.start()
-tts = ALProxy("ALTextToSpeech", ip, port)
 motionProxy = ALProxy("ALMotion", ip, port)
 postureProxy = ALProxy("ALRobotPosture", ip, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
 motionProxy.setStiffnesses('Head', 1.0)
+# starts both threads for controlling vision and arm movement
+thread = Thread(target=visionThread)  # makes a thread for the imageThread function
+thread.start()
+thread2 = Thread(target=armThread)  # makes a thread for the imageThread function
+thread2.start()
+# starting up the VR file
 process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
                            stdout=subprocess.PIPE)
+# process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+#                            stdout=subprocess.PIPE)
+# connecting to the VR data socket
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
 socket2.connect("tcp://localhost:5556")
@@ -81,11 +102,12 @@ while True:
     socket2.send(" ")
     message = socket2.recv_string()
     print(message)
-    yaw, pitch, x,y,z = map(float, message.split(" "))
+    yaw, pitch, sPitch, sRoll, eYaw, eRoll = map(float, message.split(" "))
     fractionMaxSpeed = 0.3
     motionProxy.setAngles("HeadYaw", math.radians(yaw),
                           fractionMaxSpeed)
     motionProxy.setAngles("HeadPitch", math.radians(pitch),
                           fractionMaxSpeed)
+
 
 
