@@ -13,7 +13,7 @@ ratioz = robots[2]/HMDs[1]
 ratios = [ratiox,ratioy,ratioz]
 HMDtoRobot = [2,0,1]
 print(ratios)
-relative_hmd = [0.21623797714710236, 0.18147623538970947, 0.5982634276151657]
+relative_hmd = [0.4954894036054611, 0.94499671459198, 0.29504750669002533]
 relative_robot = []
 for index, i in enumerate(HMDtoRobot):
     relative_robot.append(relative_hmd[i]*ratios[index])

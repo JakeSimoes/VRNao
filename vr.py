@@ -1,5 +1,4 @@
 from klampt import *
-from klampt import vis
 from klampt.model import ik
 import math
 import time
@@ -12,7 +11,6 @@ from PIL import ImageOps
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from threading import Thread
-from scipy.spatial.transform import Rotation as R
 
 
 """This file handles all of the VR data and interactions with the headset"""
@@ -43,11 +41,10 @@ def read_texture(image_data):
 
 # Convert the 3x4 position/rotation matrix to a x,y,z location and the appropriate Euler angles (in radians)
 def convert_to_cartesian(pose_mat):
-
     x = pose_mat[0][3]
     y = pose_mat[1][3]
     z = pose_mat[2][3]
-    return [x,y,z]
+    return [x, y, z]
 
 
 def convert_to_radians(pose_mat):
@@ -84,7 +81,7 @@ def center_headset(pose_mat):
 
 
 
-def draw_sphere():
+def draw():
     return
 
 
@@ -99,7 +96,7 @@ def overlay_refresh():
     glutCreateWindow("")
     glutHideWindow()
     # A blank function is used as there is no use for the window
-    glutDisplayFunc(draw_sphere)
+    glutDisplayFunc(draw)
     # Setting up a memory buffer for textures
     fb = glGenFramebuffers(1)
     glBindFramebuffer(GL_FRAMEBUFFER, fb)
@@ -167,8 +164,8 @@ world = WorldModel()
 world.loadFile("nao_rob/nao.rob")
 robot = world.robot(0)
 link = robot.link(69)
-HMDtoRobot = [2,0,1]
-rArmRotations = [0,0,0,0]
+HMDtoRobot = [2, 0, 1]
+rArmRotations = [0, 0, 0, 0]
 thread = Thread(target=overlay_refresh)  # makes a thread for the imageThread function
 thread.start()  # starts the imageThread which will update the video feed.
 while True:
@@ -195,6 +192,8 @@ while True:
 
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
+    # TODO: Implement better ratios for testing
+    # TODO: Have ratios be calculated for the users specific arms
     # Scale the coordinates
     ratios = [0.2690286461961894, -0.5225724060631975, 0.5510363369906585]
     relative_robot = []
@@ -208,7 +207,6 @@ while True:
     final_packet = HMD_rotation + rArmRotations
     message = socket2.recv()
     socket2.send_string("{} {} {} {} {} {}".format(*final_packet))
-    #socket2.send_string("{} {}".format(*HMD_position))
 
 
 openvr.shutdown()
