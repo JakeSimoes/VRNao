@@ -186,23 +186,23 @@ while True:
     position = [0, 0, 0]
     for index, i in enumerate(HMD_position):
         if i > controller_position[index]:
-            position[index] = i - controller_position[index]
+            position[index] = -(abs(i - controller_position[index]))
         else:
-            position[index] = controller_position[index] - i
-
+            position[index] = abs(controller_position[index] - i)
+        position[2] = -position[2]
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
     # TODO: Implement better ratios for testing
     # TODO: Have ratios be calculated for the users specific arms
     # Scale the coordinates
-    ratios = [0.2690286461961894, -0.5225724060631975, 0.5510363369906585]
+    ratios = [0.2690286461961894, -0.5225724060631975, -0.5510363369906585]
     relative_robot = []
     for index, i in enumerate(HMDtoRobot):
         relative_robot.append(position[i] * ratios[index])
     # Set them as an objective and solve.
     obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
     # Iterations are set low so it can be fast, may be weird at times.
-    ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
+    ik.solve_global(obj, iters=50, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
     rArmRotations = robot.getConfig()[65:69]
     final_packet = HMD_rotation + rArmRotations
     message = socket2.recv()
