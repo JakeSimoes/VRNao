@@ -177,11 +177,11 @@ while True:
     poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
     hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
     # This grabs that state of the controller
-    lc_pose = poses[openvr.k_EButton_IndexController_A]
-    rc_pose = poses[openvr.k_EButton_IndexController_B]
+    lc_pose = poses[openvr.k_EButton_IndexController_B]
+    rc_pose = poses[openvr.k_EButton_IndexController_A]
     HMD_rotation = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
     # Grabbing positional data and formatting it
-    controller_position = convert_to_cartesian(list(lc_pose.mDeviceToAbsoluteTracking))
+    controller_position = convert_to_cartesian(list(rc_pose.mDeviceToAbsoluteTracking))
     HMD_position = convert_to_cartesian(list(hmd_pose.mDeviceToAbsoluteTracking))
     position = [0, 0, 0]
     for index, i in enumerate(HMD_position):
@@ -189,9 +189,12 @@ while True:
             position[index] = -(abs(i - controller_position[index]))
         else:
             position[index] = abs(controller_position[index] - i)
-        position[2] = -position[2]
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
+    rc_trigger = [right_controller_state.rAxis[1].x]
+    #lc_trigger = right_controller_state.rAxis[1].x
+    #rc_stick = [right_controller_state.rAxis[0].y, right_controller_state.rAxis[0].x]
+    lc_stick = [left_controller_state.rAxis[0].y, left_controller_state.rAxis[0].x]
     # TODO: Implement better ratios for testing
     # TODO: Have ratios be calculated for the users specific arms
     # Scale the coordinates
@@ -202,11 +205,11 @@ while True:
     # Set them as an objective and solve.
     obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
     # Iterations are set low so it can be fast, may be weird at times.
-    ik.solve_global(obj, iters=50, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
+    ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
     rArmRotations = robot.getConfig()[65:69]
-    final_packet = HMD_rotation + rArmRotations
+    final_packet = HMD_rotation + rArmRotations + rc_trigger + lc_stick
     message = socket2.recv()
-    socket2.send_string("{} {} {} {} {} {}".format(*final_packet))
+    socket2.send_string("{} {} {} {} {} {} {} {} {}".format(*final_packet))
 
 
 openvr.shutdown()
