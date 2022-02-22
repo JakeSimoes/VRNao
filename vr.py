@@ -189,6 +189,7 @@ while True:
             position[index] = -(abs(i - controller_position[index]))
         else:
             position[index] = abs(controller_position[index] - i)
+        position[2] = -position[2]
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
     rc_trigger = [right_controller_state.rAxis[1].x]
