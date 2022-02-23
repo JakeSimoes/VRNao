@@ -95,8 +95,7 @@ def overlay_refresh():
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
     glutCreateWindow("")
     glutHideWindow()
-    # A blank function is used as there is no use for the window
-    glutDisplayFunc(draw)
+    glutDisplayFunc(draw)  # A blank function is used as there is no use for the window
     # Setting up a memory buffer for textures
     fb = glGenFramebuffers(1)
     glBindFramebuffer(GL_FRAMEBUFFER, fb)
@@ -164,7 +163,7 @@ world = WorldModel()
 world.loadFile("nao_rob/nao.rob")
 robot = world.robot(0)
 link = robot.link(69)
-HMDtoRobot = [2, 0, 1]
+HMDtoRobot = [2, 0, 1]  # Defining the indexes to relate HMD coords to the robots
 rArmRotations = [0, 0, 0, 0]
 thread = Thread(target=overlay_refresh)  # makes a thread for the imageThread function
 thread.start()  # starts the imageThread which will update the video feed.
@@ -184,12 +183,15 @@ while True:
     controller_position = convert_to_cartesian(list(rc_pose.mDeviceToAbsoluteTracking))
     HMD_position = convert_to_cartesian(list(hmd_pose.mDeviceToAbsoluteTracking))
     position = [0, 0, 0]
+    # The position of the controller relative to the HMD is used
+    # to determine if it's past left and negative or below, also negative
     for index, i in enumerate(HMD_position):
         if i > controller_position[index]:
             position[index] = -(abs(i - controller_position[index]))
         else:
             position[index] = abs(controller_position[index] - i)
-        position[2] = -position[2]
+    position[2] = -position[2]
+    # Triggering the head rotation with side triggers.
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
     rc_trigger = [right_controller_state.rAxis[1].x]
@@ -203,9 +205,9 @@ while True:
     relative_robot = []
     for index, i in enumerate(HMDtoRobot):
         relative_robot.append(position[i] * ratios[index])
-    # Set them as an objective and solve.
+    # Set them as an objective and solve
     obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
-    # Iterations are set low so it can be fast, may be weird at times.
+    # Iterations are set low so it can be fast, may be weird at times
     ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
     rArmRotations = robot.getConfig()[65:69]
     final_packet = HMD_rotation + rArmRotations + rc_trigger + lc_stick

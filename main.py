@@ -26,10 +26,9 @@ def armThread():
             time.sleep(1)
         else:
             break
-    print("Yep")
     global ip, port, sPitch, sRoll, eYaw, eRoll, rGrip, motionProxy
     while True:
-        motionProxy.setAngles("RShoulderPitch", -sPitch,
+        motionProxy.setAngles("RShoulderPitch", sPitch,
                               fractionMaxSpeed)
         motionProxy.setAngles("RShoulderRoll", sRoll,
                               fractionMaxSpeed)
@@ -97,10 +96,10 @@ thread.start()
 thread2 = Thread(target=armThread)  # makes a thread for the imageThread function
 thread2.start()
 # starting up the VR file
-# process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
-#                            stdout=subprocess.PIPE)
-process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
                            stdout=subprocess.PIPE)
+# process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+#                            stdout=subprocess.PIPE)
 # connecting to the VR data socket
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
