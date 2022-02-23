@@ -49,7 +49,6 @@ def convert_to_cartesian(pose_mat):
 
 def convert_to_radians(pose_mat):
     global center
-    r_w = math.sqrt(max(0, 1 + pose_mat[0][0] + pose_mat[1][1] + pose_mat[2][2])) / 2
     r_x = math.sqrt(max(0, 1 + pose_mat[0][0] - pose_mat[1][1] - pose_mat[2][2])) / 2
     r_y = math.sqrt(max(0, 1 - pose_mat[0][0] + pose_mat[1][1] - pose_mat[2][2])) / 2
     r_z = math.sqrt(max(0, 1 - pose_mat[0][0] - pose_mat[1][1] + pose_mat[2][2])) / 2
@@ -57,9 +56,6 @@ def convert_to_radians(pose_mat):
     r_y *= math.copysign(1, r_y * (-pose_mat[0][2] + pose_mat[2][0]))
     r_z *= math.copysign(1, r_z * (pose_mat[1][0] - pose_mat[0][1]))
 
-    x = pose_mat[0][3]
-    y = pose_mat[1][3]
-    z = pose_mat[2][3]
     result = ((r_y * 180) + 180)
 
     if center > 180:
@@ -67,7 +63,7 @@ def convert_to_radians(pose_mat):
     else:
         upperbound = 180 + center
 
-    if result > center and result < upperbound:
+    if center < result < upperbound:
         return [-min(abs(result - center), 360 - abs(result - center)), (r_x*40)]
     else:
         return [min(abs(result - center), 360 - abs(result - center)), (r_x*40)]
@@ -80,6 +76,20 @@ def center_headset(pose_mat):
     center = ((r_y * 180) + 180)
 
 
+def ik_solve(xyz, arm):
+    ratios = [0.2690286461961894, -0.5225724060631975, -0.5510363369906585]
+    relative_robot = []
+    for index, i in enumerate(HMDtoRobot):
+        relative_robot.append(xyz[i] * ratios[index])
+    # Set them as an objective and solve
+    obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
+    # Iterations are set low so it can be fast, may be weird at times
+    if arm == 'right':
+        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
+        return robot.getConfig()[65:69]
+    else:
+        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[35, 36, 37, 38, 39])
+        return robot.getConfig()[35:39]
 
 def draw():
     return
@@ -109,8 +119,8 @@ def overlay_refresh():
         socket.send(b"Hello")
 
         #  Get the reply.
-        message = socket.recv()
-        result = pickle.loads(message, encoding='latin1')  # Decoding latin1 for python 2.7 data conversion
+        reply = socket.recv()
+        result = pickle.loads(reply, encoding='latin1')  # Decoding latin1 for python 2.7 data conversion
         openvr.VROverlay().clearOverlayTexture(handle)  # Clears the last image
         texture = openvr.Texture_t()  # Create a texture object
         while True:
@@ -131,6 +141,7 @@ def overlay_refresh():
             finally:
                 break
 
+
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REP)
 socket2.bind("tcp://*:5556")
@@ -147,7 +158,7 @@ poses, _ = openvr.VRCompositor().waitGetPoses(poses, None)
 hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
 # the following lines convert the input to a numpy array, splice it to get
 # only the data we need and then converts that euler to x,y,z
-arr = numpy.array(list(hmd_pose.mDeviceToAbsoluteTracking))
+# arr = numpy.array(list(hmd_pose.mDeviceToAbsoluteTracking))
 
 arr = openvr.HmdMatrix34_t  # a reference to the data type
 # creates an array structure that will be put into a HmdMatrix34 variable.
@@ -165,8 +176,9 @@ robot = world.robot(0)
 link = robot.link(69)
 HMDtoRobot = [2, 0, 1]  # Defining the indexes to relate HMD coords to the robots
 rArmRotations = [0, 0, 0, 0]
-thread = Thread(target=overlay_refresh)  # makes a thread for the imageThread function
-thread.start()  # starts the imageThread which will update the video feed.
+lArmRotations = [0, 0, 0, 0]
+thread = Thread(target=overlay_refresh)  # Makes a thread for the imageThread function
+thread.start()  # Starts the imageThread which will update the video feed.
 while True:
     # Grabbing VR data
     _, left_controller_state = system.getControllerState(
@@ -180,39 +192,42 @@ while True:
     rc_pose = poses[openvr.k_EButton_IndexController_A]
     HMD_rotation = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
     # Grabbing positional data and formatting it
-    controller_position = convert_to_cartesian(list(rc_pose.mDeviceToAbsoluteTracking))
+    lc_position = convert_to_cartesian(list(lc_pose.mDeviceToAbsoluteTracking))
+    rc_position = convert_to_cartesian(list(rc_pose.mDeviceToAbsoluteTracking))
     HMD_position = convert_to_cartesian(list(hmd_pose.mDeviceToAbsoluteTracking))
-    position = [0, 0, 0]
+
+    rc_rob_position = [0, 0, 0]
     # The position of the controller relative to the HMD is used
     # to determine if it's past left and negative or below, also negative
     for index, i in enumerate(HMD_position):
-        if i > controller_position[index]:
-            position[index] = -(abs(i - controller_position[index]))
+        if i > rc_position[index]:
+            rc_rob_position[index] = -(abs(i - rc_position[index]))
         else:
-            position[index] = abs(controller_position[index] - i)
-    position[2] = -position[2]
+            rc_rob_position[index] = abs(rc_position[index] - i)
+    rc_rob_position[2] = -rc_rob_position[2]
+
+    lc_rob_position = [0, 0, 0]
+    # The position of the controller relative to the HMD is used
+    # to determine if it's past left and negative or below, also negative
+    for index, i in enumerate(HMD_position):
+        if i > lc_position[index]:
+            lc_rob_position[index] = -(abs(i - lc_position[index]))
+        else:
+            lc_rob_position[index] = abs(lc_position[index] - i)
+    lc_rob_position[2] = -lc_rob_position[2]
+
     # Triggering the head rotation with side triggers.
     if bool(right_controller_state.ulButtonPressed >> 2 & 1):
         center_headset(list(hmd_pose.mDeviceToAbsoluteTracking))
     rc_trigger = [right_controller_state.rAxis[1].x]
-    #lc_trigger = right_controller_state.rAxis[1].x
-    #rc_stick = [right_controller_state.rAxis[0].y, right_controller_state.rAxis[0].x]
+    lc_trigger = [left_controller_state.rAxis[1].x]
+    rc_stick = [right_controller_state.rAxis[0].y, right_controller_state.rAxis[0].x]
     lc_stick = [left_controller_state.rAxis[0].y, left_controller_state.rAxis[0].x]
     # TODO: Implement better ratios for testing
     # TODO: Have ratios be calculated for the users specific arms
     # Scale the coordinates
-    ratios = [0.2690286461961894, -0.5225724060631975, -0.5510363369906585]
-    relative_robot = []
-    for index, i in enumerate(HMDtoRobot):
-        relative_robot.append(position[i] * ratios[index])
-    # Set them as an objective and solve
-    obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
-    # Iterations are set low so it can be fast, may be weird at times
-    ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
-    rArmRotations = robot.getConfig()[65:69]
-    final_packet = HMD_rotation + rArmRotations + rc_trigger + lc_stick
+
+    final_packet = HMD_rotation + ik_solve(lc_rob_position, 'left') + \
+        ik_solve(rc_rob_position, 'right') + lc_trigger + rc_trigger + lc_stick + rc_stick
     message = socket2.recv()
-    socket2.send_string("{} {} {} {} {} {} {} {} {}".format(*final_packet))
-
-
-openvr.shutdown()
+    socket2.send_string("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}".format(*final_packet))

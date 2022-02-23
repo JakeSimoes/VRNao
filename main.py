@@ -13,7 +13,6 @@ from threading import Thread
 """This file handles all the Nao interactions"""
 
 """ROBOT IP"""
-#10.30.48.184
 ip = "127.0.0.1"
 port = 9559
 
@@ -22,22 +21,31 @@ def armThread():
     # TODO: Add gripper and wrist rotation control.
     # wait a good amount of time for variables to get initialized
     while True:
-        if 'sPitch' not in globals():
+        if 'rPitch' not in globals():
             time.sleep(1)
         else:
             break
-    global ip, port, sPitch, sRoll, eYaw, eRoll, rGrip, motionProxy
+    global rPitch, rRoll, rYaw, reRoll, lPitch, lRoll, lYaw, leRoll, rTrig, lTrig, motionProxy
     while True:
-        motionProxy.setAngles("RShoulderPitch", sPitch,
-                              fractionMaxSpeed)
-        motionProxy.setAngles("RShoulderRoll", sRoll,
-                              fractionMaxSpeed)
-        motionProxy.setAngles("RElbowYaw", eYaw,
-                              fractionMaxSpeed)
-        motionProxy.setAngles("RElbowRoll", eRoll,
-                              fractionMaxSpeed)
-        #motionProxy.setAngles("RHand", rGrip, fractionMaxSpeed)
-        time.sleep(1)
+        motionProxy.setAngles("RShoulderPitch", -rPitch,
+                              0.1)
+        motionProxy.setAngles("RShoulderRoll", rRoll,
+                              0.1)
+        motionProxy.setAngles("RElbowYaw", rYaw,
+                              0.1)
+        motionProxy.setAngles("RElbowRoll", reRoll,
+                              0.1)
+        motionProxy.setAngles("LShoulderPitch", -lPitch,
+                              0.1)
+        motionProxy.setAngles("LShoulderRoll", lRoll,
+                              0.1)
+        motionProxy.setAngles("LElbowYaw", lYaw,
+                              0.1)
+        motionProxy.setAngles("LElbowRoll", leRoll,
+                              0.1)
+        motionProxy.setAngles("RHand", rTrig, 0.1)
+        motionProxy.setAngles("RHand", lTrig, 0.1)
+        time.sleep(0.1)
 
 
 def visionThread():
@@ -108,16 +116,14 @@ while True:
     socket2.send(" ")
     message = socket2.recv_string()
     print(message)
-    yaw, pitch, sPitch, sRoll, eYaw, eRoll, rGrip, rY, rX = map(float, message.split(" "))
+    yaw, pitch, lPitch, lRoll, lYaw, leRoll, rPitch, rRoll, \
+    rYaw, reRoll, lTrig, rTrig, lY, lX, rY, rX = map(float, message.split(" "))
     fractionMaxSpeed = 0.3
     motionProxy.setAngles("HeadYaw", math.radians(yaw),
                           fractionMaxSpeed)
     motionProxy.setAngles("HeadPitch", math.radians(pitch),
                           fractionMaxSpeed)
-    if rY > 0.1 or rX > 0.1 or rY < -0.1 or rX < -0.1:
-        motionProxy.setWalkTargetVelocity(rY, -rX, 0.0, 0.0)
+    if lY > 0.1 or lX > 0.1 or lY < -0.1 or lX < -0.1:
+        motionProxy.setWalkTargetVelocity(lY, -lX, 0.0, 0.0)
     else:
         motionProxy.setWalkTargetVelocity(0.0, 0.0, 0.0, 0.0)
-
-
-
