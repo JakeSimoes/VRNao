@@ -44,7 +44,7 @@ def armThread():
         motionProxy.setAngles("LElbowRoll", leRoll,
                               0.1)
         motionProxy.setAngles("RHand", rTrig, 0.1)
-        motionProxy.setAngles("RHand", lTrig, 0.1)
+        motionProxy.setAngles("LHand", lTrig, 0.1)
         time.sleep(0.1)
 
 
@@ -104,10 +104,10 @@ thread.start()
 thread2 = Thread(target=armThread)  # makes a thread for the imageThread function
 thread2.start()
 # starting up the VR file
-process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
-                           stdout=subprocess.PIPE)
-# process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+# process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
 #                            stdout=subprocess.PIPE)
+process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+                           stdout=subprocess.PIPE)
 # connecting to the VR data socket
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
@@ -118,11 +118,10 @@ while True:
     print(message)
     yaw, pitch, lPitch, lRoll, lYaw, leRoll, rPitch, rRoll, \
     rYaw, reRoll, lTrig, rTrig, lY, lX, rY, rX = map(float, message.split(" "))
-    fractionMaxSpeed = 0.3
     motionProxy.setAngles("HeadYaw", math.radians(yaw),
-                          fractionMaxSpeed)
+                          0.3)
     motionProxy.setAngles("HeadPitch", math.radians(pitch),
-                          fractionMaxSpeed)
+                          0.3)
     if lY > 0.1 or lX > 0.1 or lY < -0.1 or lX < -0.1:
         motionProxy.setWalkTargetVelocity(lY, -lX, 0.0, 0.0)
     else:

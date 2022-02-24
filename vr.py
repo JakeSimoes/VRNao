@@ -82,13 +82,14 @@ def ik_solve(xyz, arm):
     for index, i in enumerate(HMDtoRobot):
         relative_robot.append(xyz[i] * ratios[index])
     # Set them as an objective and solve
-    obj = ik.objective(link, local=[0, 0, 0], world=relative_robot)
     # Iterations are set low so it can be fast, may be weird at times
     if arm == 'right':
+        obj = ik.objective(right_link, local=[0, 0, 0], world=relative_robot)
         ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
         return robot.getConfig()[65:69]
     else:
-        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[35, 36, 37, 38, 39])
+        obj = ik.objective(left_link, local=[0, 0, 0], world=relative_robot)
+        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=300, activeDofs=[35, 36, 37, 38, 39])
         return robot.getConfig()[35:39]
 
 def draw():
@@ -162,7 +163,7 @@ hmd_pose = poses[openvr.k_unTrackedDeviceIndex_Hmd]
 
 arr = openvr.HmdMatrix34_t  # a reference to the data type
 # creates an array structure that will be put into a HmdMatrix34 variable.
-bar = arr((1.0, 0, 0, 0), (0, 1.0, 0, -0.05), (0, 0, 1.0, -0.5))
+bar = arr((.5, 0, 0, 0), (0, .5, 0, -0.05), (0, 0, .5, -0.5))
 test = openvr.Structure.__new__(openvr.HmdMatrix34_t)  # creating a empty var
 test._setArray(bar)  # setting the empty HmdMatrix34 var to the bar array.
 # sets the overlays position to be relative to the headset
@@ -173,7 +174,8 @@ openvr.VROverlay().setOverlayTransformTrackedDeviceRelative(handle,
 world = WorldModel()
 world.loadFile("nao_rob/nao.rob")
 robot = world.robot(0)
-link = robot.link(69)
+left_link = robot.link(39)
+right_link = robot.link(69)
 HMDtoRobot = [2, 0, 1]  # Defining the indexes to relate HMD coords to the robots
 rArmRotations = [0, 0, 0, 0]
 lArmRotations = [0, 0, 0, 0]
