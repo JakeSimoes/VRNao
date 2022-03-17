@@ -1,5 +1,4 @@
-from klampt import *
-from klampt.model import ik
+import klampt
 import math
 import time
 import zmq
@@ -36,6 +35,7 @@ def read_texture(image_data):
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0)
     # Sending data to the buffer...
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0)
+    print("1")
     return texture_id
 
 
@@ -84,13 +84,14 @@ def ik_solve(xyz, arm):
     # Set them as an objective and solve
     # Iterations are set low so it can be fast, may be weird at times
     if arm == 'right':
-        obj = ik.objective(right_link, local=[0, 0, 0], world=relative_robot)
-        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
+        obj = klampt.model.ik.objective(right_link, local=[0, 0, 0], world=relative_robot)
+        klampt.model.ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
         return robot.getConfig()[65:69]
     else:
-        obj = ik.objective(left_link, local=[0, 0, 0], world=relative_robot)
-        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=300, activeDofs=[35, 36, 37, 38, 39])
+        obj = klampt.model.ik.objective(left_link, local=[0, 0, 0], world=relative_robot)
+        klampt.model.ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=300, activeDofs=[35, 36, 37, 38, 39])
         return robot.getConfig()[35:39]
+
 
 def draw():
     return
@@ -117,7 +118,7 @@ def overlay_refresh():
     time.sleep(0.1)
     while True:
         pass
-        socket.send(b"Hello")
+        socket.send(b" ")
 
         #  Get the reply.
         reply = socket.recv()
@@ -128,6 +129,7 @@ def overlay_refresh():
             try:  # The read_texture func is called in a try statement to catch memory access errors
                 texture.handle = read_texture(result)  # Setting the handle attribute to the result of read_texture()
             except Exception as e:
+                print(e)
                 continue
             finally:
                 break
@@ -138,6 +140,7 @@ def overlay_refresh():
                 openvr.VROverlay().setOverlayTexture(handle, texture)  # Finally sending the texture to OpenVR
                 openvr.VROverlay().showOverlay(handle)  # Making sure to show it!
             except Exception as e:
+                print('error! 2')
                 continue
             finally:
                 break
@@ -171,7 +174,7 @@ openvr.VROverlay().setOverlayTransformTrackedDeviceRelative(handle,
                                                             openvr.k_unTrackedDeviceIndex_Hmd,
                                                             test)
 # now setting up the IK solver...
-world = WorldModel()
+world = klampt.WorldModel()
 world.loadFile("nao_rob/nao.rob")
 robot = world.robot(0)
 left_link = robot.link(39)
@@ -225,7 +228,6 @@ while True:
     lc_trigger = [left_controller_state.rAxis[1].x]
     rc_stick = [right_controller_state.rAxis[0].y, right_controller_state.rAxis[0].x]
     lc_stick = [left_controller_state.rAxis[0].y, left_controller_state.rAxis[0].x]
-    # TODO: Implement better ratios for testing
     # TODO: Have ratios be calculated for the users specific arms
     # Scale the coordinates
 

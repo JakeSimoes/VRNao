@@ -93,7 +93,6 @@ def visionThread():
             socket.send(pickle.dumps(image))
 
 
-# this file is the main file which controls NAO
 motionProxy = ALProxy("ALMotion", ip, port)
 postureProxy = ALProxy("ALRobotPosture", ip, 9559)
 postureProxy.goToPosture("StandInit", 0.5)
@@ -103,15 +102,18 @@ thread = Thread(target=visionThread)  # makes a thread for the imageThread funct
 thread.start()
 thread2 = Thread(target=armThread)  # makes a thread for the imageThread function
 thread2.start()
-# starting up the VR file
-# process = subprocess.Popen("""C:/Python38/python.exe vr.py""",
-#                            stdout=subprocess.PIPE)
-process = subprocess.Popen("""C:/Users/Jake Simoes/AppData/Local/Programs/Python/Python39/python.exe vr.py""",
+
+"""OpenVR doesn't work with python 2.7, to move around that issue
+   a python 3.8 install with it is used and communicated to via sockets."""
+process = subprocess.Popen("""C:/Users/JakeS/PycharmProjects/VRNao/venv/Scripts/python.exe vr.py""",
                            stdout=subprocess.PIPE)
+# process = subprocess.Popen("""vr/vr.exe""",
+#                            stdout=subprocess.PIPE)
 # connecting to the VR data socket
 context2 = zmq.Context()
 socket2 = context2.socket(zmq.REQ)
 socket2.connect("tcp://localhost:5556")
+
 while True:
     socket2.send(" ")
     message = socket2.recv_string()
@@ -124,5 +126,7 @@ while True:
                           0.3)
     if lY > 0.1 or lX > 0.1 or lY < -0.1 or lX < -0.1:
         motionProxy.setWalkTargetVelocity(lY, -lX, 0.0, 0.0)
+    elif rY > 0.1 or rX > 0.1 or rY < -0.1 or rX < -0.1:
+        motionProxy.moveToward(rY, -rX, 0.0, 0.0)
     else:
         motionProxy.setWalkTargetVelocity(0.0, 0.0, 0.0, 0.0)
