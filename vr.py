@@ -1,4 +1,5 @@
-import klampt
+from klampt import WorldModel
+from klampt.model import ik
 import math
 import time
 import zmq
@@ -35,7 +36,6 @@ def read_texture(image_data):
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0)
     # Sending data to the buffer...
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0)
-    print("1")
     return texture_id
 
 
@@ -69,6 +69,12 @@ def convert_to_radians(pose_mat):
         return [min(abs(result - center), 360 - abs(result - center)), (r_x*40)]
 
 
+def convert_to_radians_controller(pose_mat):
+    r_z = math.sqrt(max(0, 1 - pose_mat[0][0] - pose_mat[1][1] + pose_mat[2][2])) / 2
+    r_z *= math.copysign(1, r_z * (pose_mat[1][0] - pose_mat[0][1]))
+    return r_z
+
+
 def center_headset(pose_mat):
     global center
     r_y = math.sqrt(max(0, 1 - pose_mat[0][0] + pose_mat[1][1] - pose_mat[2][2])) / 2
@@ -84,12 +90,12 @@ def ik_solve(xyz, arm):
     # Set them as an objective and solve
     # Iterations are set low so it can be fast, may be weird at times
     if arm == 'right':
-        obj = klampt.model.ik.objective(right_link, local=[0, 0, 0], world=relative_robot)
-        klampt.model.ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=100, activeDofs=[65, 66, 67, 68, 69])
+        obj = ik.objective(right_link, local=[0, 0, 0], world=relative_robot)
+        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=50, activeDofs=[65, 66, 67, 68, 69])
         return robot.getConfig()[65:69]
     else:
-        obj = klampt.model.ik.objective(left_link, local=[0, 0, 0], world=relative_robot)
-        klampt.model.ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=300, activeDofs=[35, 36, 37, 38, 39])
+        obj = ik.objective(left_link, local=[0, 0, 0], world=relative_robot)
+        ik.solve_global(obj, iters=100, tol=1e-3, numRestarts=50, activeDofs=[35, 36, 37, 38, 39])
         return robot.getConfig()[35:39]
 
 
@@ -174,7 +180,7 @@ openvr.VROverlay().setOverlayTransformTrackedDeviceRelative(handle,
                                                             openvr.k_unTrackedDeviceIndex_Hmd,
                                                             test)
 # now setting up the IK solver...
-world = klampt.WorldModel()
+world = WorldModel()
 world.loadFile("nao_rob/nao.rob")
 robot = world.robot(0)
 left_link = robot.link(39)
@@ -195,6 +201,8 @@ while True:
     # This grabs that state of the controller
     lc_pose = poses[openvr.k_EButton_IndexController_B]
     rc_pose = poses[openvr.k_EButton_IndexController_A]
+    lc_rotation = convert_to_radians_controller(lc_pose.mDeviceToAbsoluteTracking)
+    rc_rotation = convert_to_radians_controller(rc_pose.mDeviceToAbsoluteTracking)
     HMD_rotation = convert_to_radians(list(hmd_pose.mDeviceToAbsoluteTracking))
     # Grabbing positional data and formatting it
     lc_position = convert_to_cartesian(list(lc_pose.mDeviceToAbsoluteTracking))
@@ -232,6 +240,7 @@ while True:
     # Scale the coordinates
 
     final_packet = HMD_rotation + ik_solve(lc_rob_position, 'left') + \
-        ik_solve(rc_rob_position, 'right') + lc_trigger + rc_trigger + lc_stick + rc_stick
+        ik_solve(rc_rob_position, 'right') + lc_trigger + rc_trigger + lc_stick + rc_stick + \
+                   [lc_rotation] + [rc_rotation]
     message = socket2.recv()
-    socket2.send_string("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}".format(*final_packet))
+    socket2.send_string("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}".format(*final_packet))
