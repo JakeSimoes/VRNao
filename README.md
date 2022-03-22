@@ -8,6 +8,8 @@ Using the Python binding for OpenVR and the Python 2.7 naoqi library it's possib
 
 Some solutions to problems are code snippets from others which should be cited.
 
+EXE DOWNLOAD: https://drive.google.com/file/d/1li8-zqVsgT7ncOITcOvQTkv4UfmRBsgR/view?usp=sharing
+
 # Features
 - View NAO's cameras through the headset, move his head with HMD movement.
 - Position NAO's arms using the controllers.
